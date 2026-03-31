@@ -48,6 +48,8 @@ export async function consolidateSessionWithLLM(
 			factsExtracted++;
 		}
 
+		await applyRetentionPolicy(memory, sessionData);
+
 		return {
 			result: {
 				episodesCreated: 1,
@@ -106,6 +108,8 @@ export async function consolidateSession(memory: MemorySystem, sessionData: Sess
 		await memory.storeFact(fact);
 		factsExtracted++;
 	}
+
+	await applyRetentionPolicy(memory, sessionData);
 
 	return {
 		episodesCreated,
@@ -240,4 +244,11 @@ function extractFactsFromSession(data: SessionData, episodeId: string): Semantic
 	}
 
 	return facts;
+}
+
+async function applyRetentionPolicy(memory: MemorySystem, data: SessionData): Promise<void> {
+	await Promise.allSettled([
+		memory.pruneStaleEpisodes(data.userId, data.endedAt),
+		memory.pruneExpiredFacts(data.endedAt),
+	]);
 }
