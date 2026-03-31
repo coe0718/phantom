@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import type { DynamicToolDef } from "../dynamic-tools.ts";
 import { buildSafeEnv, executeDynamicHandler } from "../dynamic-handlers.ts";
+import type { DynamicToolDef } from "../dynamic-tools.ts";
+
+function restoreEnvVar(name: string, original: string | undefined, hadOriginal: boolean): void {
+	if (hadOriginal && original !== undefined) {
+		process.env[name] = original;
+		return;
+	}
+
+	Reflect.deleteProperty(process.env, name);
+}
 
 describe("buildSafeEnv", () => {
 	test("includes only safe environment variables", () => {
@@ -14,6 +23,7 @@ describe("buildSafeEnv", () => {
 	});
 
 	test("does not include ANTHROPIC_API_KEY", () => {
+		const hadOriginal = Object.prototype.hasOwnProperty.call(process.env, "ANTHROPIC_API_KEY");
 		const origKey = process.env.ANTHROPIC_API_KEY;
 		process.env.ANTHROPIC_API_KEY = "sk-ant-test-key-should-not-leak";
 		try {
@@ -21,15 +31,12 @@ describe("buildSafeEnv", () => {
 			expect(env.ANTHROPIC_API_KEY).toBeUndefined();
 			expect(JSON.stringify(env)).not.toContain("sk-ant-test-key-should-not-leak");
 		} finally {
-			if (origKey !== undefined) {
-				process.env.ANTHROPIC_API_KEY = origKey;
-			} else {
-				delete process.env.ANTHROPIC_API_KEY;
-			}
+			restoreEnvVar("ANTHROPIC_API_KEY", origKey, hadOriginal);
 		}
 	});
 
 	test("does not include SLACK_BOT_TOKEN", () => {
+		const hadOriginal = Object.prototype.hasOwnProperty.call(process.env, "SLACK_BOT_TOKEN");
 		const origToken = process.env.SLACK_BOT_TOKEN;
 		process.env.SLACK_BOT_TOKEN = "xoxb-test-token-should-not-leak";
 		try {
@@ -37,11 +44,7 @@ describe("buildSafeEnv", () => {
 			expect(env.SLACK_BOT_TOKEN).toBeUndefined();
 			expect(JSON.stringify(env)).not.toContain("xoxb-test-token-should-not-leak");
 		} finally {
-			if (origToken !== undefined) {
-				process.env.SLACK_BOT_TOKEN = origToken;
-			} else {
-				delete process.env.SLACK_BOT_TOKEN;
-			}
+			restoreEnvVar("SLACK_BOT_TOKEN", origToken, hadOriginal);
 		}
 	});
 });
@@ -72,6 +75,7 @@ describe("executeDynamicHandler", () => {
 			handlerCode: "echo $ANTHROPIC_API_KEY",
 		};
 
+		const hadOriginal = Object.prototype.hasOwnProperty.call(process.env, "ANTHROPIC_API_KEY");
 		const origKey = process.env.ANTHROPIC_API_KEY;
 		process.env.ANTHROPIC_API_KEY = "sk-ant-test-key-should-not-leak";
 		try {
@@ -79,11 +83,7 @@ describe("executeDynamicHandler", () => {
 			const text = (result.content[0] as { type: string; text: string }).text;
 			expect(text).not.toContain("sk-ant-test-key-should-not-leak");
 		} finally {
-			if (origKey !== undefined) {
-				process.env.ANTHROPIC_API_KEY = origKey;
-			} else {
-				delete process.env.ANTHROPIC_API_KEY;
-			}
+			restoreEnvVar("ANTHROPIC_API_KEY", origKey, hadOriginal);
 		}
 	});
 
@@ -143,6 +143,7 @@ describe("executeDynamicHandler", () => {
 			handlerPath: tmpFile,
 		};
 
+		const hadOriginal = Object.prototype.hasOwnProperty.call(process.env, "ANTHROPIC_API_KEY");
 		const origKey = process.env.ANTHROPIC_API_KEY;
 		process.env.ANTHROPIC_API_KEY = "sk-ant-test-key-should-not-leak";
 		try {
@@ -151,11 +152,7 @@ describe("executeDynamicHandler", () => {
 			expect(text).not.toContain("sk-ant-test-key-should-not-leak");
 			expect(text).toBe("NOT_SET");
 		} finally {
-			if (origKey !== undefined) {
-				process.env.ANTHROPIC_API_KEY = origKey;
-			} else {
-				delete process.env.ANTHROPIC_API_KEY;
-			}
+			restoreEnvVar("ANTHROPIC_API_KEY", origKey, hadOriginal);
 		}
 	});
 
