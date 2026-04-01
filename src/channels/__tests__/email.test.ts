@@ -168,7 +168,6 @@ describe("EmailChannel", () => {
 	test("rapid disconnect and reconnect does not leak IDLE loops", async () => {
 		const channel = new EmailChannel(testConfig);
 		await channel.connect();
-		const lockCallsBefore = mockGetMailboxLock.mock.calls.length;
 
 		await channel.disconnect();
 		mockGetMailboxLock.mockClear();
